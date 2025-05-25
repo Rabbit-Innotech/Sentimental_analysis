@@ -1,20 +1,18 @@
 services:
   - type: web
-    name: rwanda-fare-sentiment-dashboard
+    name: sentiment-analysis-dashboard
     env: python
-    region: oregon
-    plan: free
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt
     startCommand: python app.py
+    plan: free
     healthCheckPath: /
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.7
-      - key: PORT
-        value: 10000
+        value: 3.9.16
       - key: GRADIO_SERVER_NAME
         value: 0.0.0.0
-    disk:
-      name: gradio-cache
-      mountPath: /opt/render/.cache
-      sizeGB: 1
+      - key: GRADIO_SERVER_PORT
+        fromService:
+          type: web
+          name: sentiment-analysis-dashboard
+          property: port

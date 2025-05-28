@@ -15,6 +15,11 @@ from plotly.subplots import make_subplots
 from wordcloud import WordCloud
 from youtube_comment_downloader import YoutubeCommentDownloader
 
+import re
+import requests
+from datetime import datetime, timedelta
+import pandas as pd
+
 # Suppress warnings
 warnings.filterwarnings('ignore')
 os.environ['MPLBACKEND'] = 'Agg'
@@ -242,10 +247,7 @@ class DataProcessor:
     #     except Exception as e:
     #         raise gr.Error(f"Failed to retrieve comments: {str(e)}")
 
-    import re
-    import requests
-    from datetime import datetime, timedelta
-    import pandas as pd
+
     
     def convert_relative_time(self, relative):
         """Convert relative time string to datetime"""

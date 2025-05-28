@@ -179,6 +179,74 @@ class DataProcessor:
             print(f"Error processing file: {e}")
             return self.generate_sample_data()
     
+    # def convert_relative_time(self, relative):
+    #     """Convert relative time string to datetime"""
+    #     now = datetime.now()
+    #     try:
+    #         match = re.match(r'(\d+)\s+(second|minute|hour|day|week|month|year)s?\s+ago', relative.lower())
+    #         if not match:
+    #             return now
+            
+    #         value, unit = int(match.group(1)), match.group(2)
+            
+    #         time_deltas = {
+    #             'second': timedelta(seconds=value),
+    #             'minute': timedelta(minutes=value),
+    #             'hour': timedelta(hours=value),
+    #             'day': timedelta(days=value),
+    #             'week': timedelta(weeks=value),
+    #             'month': timedelta(days=value * 30),
+    #             'year': timedelta(days=value * 365)
+    #         }
+            
+    #         return now - time_deltas.get(unit, timedelta(0))
+            
+    #     except Exception as e:
+    #         print(f"Failed to parse relative time '{relative}': {e}")
+    #         return now
+    
+    # def process_youtube_comments(self, video_url):
+    #     """Process YouTube video comments"""
+    #     youtube_pattern = r"(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w-]{11}"
+    #     if not re.match(youtube_pattern, video_url):
+    #         raise gr.Error("Please provide a valid YouTube video link.")
+        
+    #     try:
+    #         downloader = YoutubeCommentDownloader()
+    #         comments = downloader.get_comments_from_url(video_url)
+    #         if not comments:
+    #             raise gr.Error("No comments found for this video.")
+            
+    #         processed_data = []
+    #         for comment in comments:
+    #             text = comment.get('text', '')
+    #             timestamp = self.convert_relative_time(comment.get('time', '0 seconds ago'))
+                
+    #             sentiment, score = self.analyzer.analyze_sentiment(text)
+    #             keywords = self.analyzer.extract_keywords(text, 3)
+    #             keyword_str = ", ".join(keywords) if keywords else "N/A"
+                
+    #             processed_data.append({
+    #                 "Datetime": timestamp,
+    #                 "Text": text,
+    #                 "Sentiment": sentiment,
+    #                 "Score": score,
+    #                 "Keywords": keyword_str
+    #             })
+            
+    #         self.data = pd.DataFrame(processed_data)
+    #         self.data["Datetime"] = pd.to_datetime(self.data["Datetime"])
+    #         self.data = self.data.sort_values("Datetime").reset_index(drop=True)
+    #         return self.data
+            
+    #     except Exception as e:
+    #         raise gr.Error(f"Failed to retrieve comments: {str(e)}")
+
+    import re
+    import requests
+    from datetime import datetime, timedelta
+    import pandas as pd
+    
     def convert_relative_time(self, relative):
         """Convert relative time string to datetime"""
         now = datetime.now()
@@ -188,7 +256,6 @@ class DataProcessor:
                 return now
             
             value, unit = int(match.group(1)), match.group(2)
-            
             time_deltas = {
                 'second': timedelta(seconds=value),
                 'minute': timedelta(minutes=value),
@@ -198,29 +265,89 @@ class DataProcessor:
                 'month': timedelta(days=value * 30),
                 'year': timedelta(days=value * 365)
             }
-            
             return now - time_deltas.get(unit, timedelta(0))
-            
         except Exception as e:
             print(f"Failed to parse relative time '{relative}': {e}")
             return now
     
+    def extract_video_id(self, video_url):
+        """Extract video ID from YouTube URL"""
+        patterns = [
+            r'youtube\.com/watch\?v=([^&]+)',
+            r'youtu\.be/([^?]+)',
+            r'youtube\.com/embed/([^?]+)'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, video_url)
+            if match:
+                return match.group(1)
+        return None
+    
     def process_youtube_comments(self, video_url):
-        """Process YouTube video comments"""
+        """Process YouTube video comments using YouTube API"""
+        api_key = "AIzaSyDlGn2abWfnPLb5JL2e9H7MrujvEDuBHtI"
+        
+        # Validate YouTube URL
         youtube_pattern = r"(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w-]{11}"
         if not re.match(youtube_pattern, video_url):
             raise gr.Error("Please provide a valid YouTube video link.")
         
+        # Extract video ID
+        video_id = self.extract_video_id(video_url)
+        if not video_id:
+            raise gr.Error("Could not extract video ID from URL.")
+        
         try:
-            downloader = YoutubeCommentDownloader()
-            comments = downloader.get_comments_from_url(video_url)
-            if not comments:
+            # Fetch comments using YouTube API
+            comments_url = "https://www.googleapis.com/youtube/v3/commentThreads"
+            params = {
+                'part': 'snippet',
+                'videoId': video_id,
+                'key': api_key,
+                'maxResults': 10000,  # Adjust as needed
+                'order': 'time'
+            }
+            
+            all_comments = []
+            next_page_token = None
+            
+            while True:
+                if next_page_token:
+                    params['pageToken'] = next_page_token
+                
+                response = requests.get(comments_url, params=params)
+                
+                if response.status_code != 200:
+                    raise gr.Error(f"API request failed: {response.status_code} - {response.text}")
+                
+                data = response.json()
+                
+                if 'items' not in data or not data['items']:
+                    break
+                
+                for item in data['items']:
+                    comment = item['snippet']['topLevelComment']['snippet']
+                    all_comments.append({
+                        'text': comment['textDisplay'],
+                        'time': comment['publishedAt'],
+                        'author': comment['authorDisplayName'],
+                        'likes': comment['likeCount']
+                    })
+                
+                # Check if there are more pages
+                next_page_token = data.get('nextPageToken')
+                if not next_page_token:
+                    break
+            
+            if not all_comments:
                 raise gr.Error("No comments found for this video.")
             
             processed_data = []
-            for comment in comments:
+            for comment in all_comments:
                 text = comment.get('text', '')
-                timestamp = self.convert_relative_time(comment.get('time', '0 seconds ago'))
+                # Convert ISO timestamp to datetime
+                timestamp = datetime.fromisoformat(comment.get('time', '').replace('Z', '+00:00'))
                 
                 sentiment, score = self.analyzer.analyze_sentiment(text)
                 keywords = self.analyzer.extract_keywords(text, 3)
@@ -231,16 +358,20 @@ class DataProcessor:
                     "Text": text,
                     "Sentiment": sentiment,
                     "Score": score,
-                    "Keywords": keyword_str
+                    "Keywords": keyword_str,
+                    "Author": comment.get('author', ''),
+                    "Likes": comment.get('likes', 0)
                 })
             
             self.data = pd.DataFrame(processed_data)
             self.data["Datetime"] = pd.to_datetime(self.data["Datetime"])
             self.data = self.data.sort_values("Datetime").reset_index(drop=True)
+            
             return self.data
             
         except Exception as e:
             raise gr.Error(f"Failed to retrieve comments: {str(e)}")
+    
     
     def get_summary_metrics(self):
         """Generate summary metrics"""

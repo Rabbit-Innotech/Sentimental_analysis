@@ -1,5 +1,6 @@
-pandas==2.0.3
-numpy==1.24.3
-plotly==5.15.0
-gradio==3.50.2
-openpyxl==3.1.2
+pandas
+numpy
+gradio
+plotly
+wordcloud
+youtube-comment-downloader

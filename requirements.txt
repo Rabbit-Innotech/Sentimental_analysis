@@ -1,12 +1,5 @@
-transformers>=4.40.0
-keybert>=0.7.0
-pandas>=1.5.3
-numpy>=1.21.0
-matplotlib>=3.5.0
-plotly>=5.5.0
-gradio>=3.50.0
-youtube-comment-downloader>=0.1.4
-torch>=1.13.0
-scikit-learn>=1.0.2
-sentence-transformers>=2.2.2
-openpyxl
+pandas==2.0.3
+numpy==1.24.3
+plotly==5.15.0
+gradio==3.50.2
+openpyxl==3.1.2

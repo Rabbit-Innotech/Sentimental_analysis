@@ -1186,27 +1186,30 @@ def create_interface():
                         interactive=False
                     )
 
-                # Visualizations
-                gr.Markdown("### 📈 Comprehensive Analysis")
-
-                with gr.Tabs():
-                    with gr.Tab("Timeline Analysis"):
+                # Visualization
+                gr.Markdown("### 📈 Comprehensive Analysis Dashboard")
+                
+                # Create a grid layout with all visualizations
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        gr.Markdown("#### Timeline Analysis")
                         timeline_plot = gr.Plot(value=visualizer.create_sentiment_timeline())
-
-                    with gr.Tab("Sentiment Distribution"):
-                        distribution_plot = gr.Plot(value=visualizer.create_sentiment_distribution())
-
-                    with gr.Tab("Keyword Analysis"):
+                        
+                        gr.Markdown("#### Keyword Analysis") 
                         keyword_plot = gr.Plot(value=visualizer.create_keyword_analysis())
-
-                    with gr.Tab("Emotion Analysis"):
-                        emotion_plot = gr.Plot(value=visualizer.create_emotion_analysis())
-
-                    with gr.Tab("Topic Analysis"):
-                        topic_plot = gr.Plot(value=visualizer.create_topic_analysis())
-
-                    with gr.Tab("Behavior Analysis"):
+                        
+                        gr.Markdown("#### Behavior Analysis")
                         behavior_plot = gr.Plot(value=visualizer.create_behavior_analysis())
+                    
+                    with gr.Column(scale=1):
+                        gr.Markdown("#### Sentiment Distribution")
+                        distribution_plot = gr.Plot(value=visualizer.create_sentiment_distribution())
+                        
+                        gr.Markdown("#### Emotion Analysis")
+                        emotion_plot = gr.Plot(value=visualizer.create_emotion_analysis())
+                        
+                        gr.Markdown("#### Topic Analysis")
+                        topic_plot = gr.Plot(value=visualizer.create_topic_analysis())
 
                 # Word Cloud Section
                 gr.Markdown("### ☁️ Word Cloud Visualization")
